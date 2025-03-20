@@ -78,7 +78,7 @@ Translations are periodically pulled from Transifex and merged into the git repo
 **Important**: We do not accept translation changes as GitHub pull requests because the next
 pull from Transifex would automatically overwrite them again.
 
-# To build the custom 
+# To build the custom bitcoin core 
 
 1. ** Setting Up Your Development Environment **
 
@@ -114,7 +114,13 @@ sudo apt-get install build-essential libtool autotools-dev automake pkg-config b
 
     *Note: The `-j $(nproc)` flag tells `make` to use multiple cores for faster compilation.  Adjust the number of cores if needed.*
 
-6.  **Run the `bitcoind` daemon:**
+6.  **Run the tests:**
+
+    ```bash
+    ctest --test-dir .
+    ```
+
+7.  **Run the `bitcoind` daemon:**
 
     ```bash
     ./bin/bitcoind
@@ -122,8 +128,3 @@ sudo apt-get install build-essential libtool autotools-dev automake pkg-config b
 
     For testing, consider using testnet or regtest modes (e.g., ./src/bitcoind -testnet).
 
-7.  **Run the tests:**
-
-    ```bash
-    ctest --test-dir .
-    ```
