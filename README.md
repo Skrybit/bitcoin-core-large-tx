@@ -79,44 +79,51 @@ Translations are periodically pulled from Transifex and merged into the git repo
 pull from Transifex would automatically overwrite them again.
 
 # To build the custom 
-1.  **Clone the repository:**
 
-    ```
+1. ** Setting Up Your Development Environment **
+
+```
+sudo apt update
+sudo apt-get install build-essential libtool autotools-dev automake pkg-config bsdmainutils python3 libssl-dev libevent-dev libboost-system-dev libboost-filesystem-dev libboost-chrono-dev libboost-test-dev libboost-thread-dev libminiupnpc-dev libzmq3-dev libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev protobuf-compiler git libsqlite3-dev ccache cmake
+```
+2.  **Clone the repository:**
+
+    ```bash
     git clone https://github.com/Skrybit/bitcoin-core-large-tx
     cd bitcoin-core-large-tx
     ```
 
-2.  **Create a build directory:**
+3.  **Create a build directory:**
 
-    ```
+    ```bash
     mkdir build
     cd build
     ```
 
-3.  **Configure the build using CMake:**
+4.  **Configure the build using CMake:**
 
-    ```
+    ```bash
     cmake ..
     ```
 
-4.  **Build the executables:**
+5.  **Build the executables:**
 
-    ```
+    ```bash
     cmake --build . -j $(nproc)
     ```
 
     *Note: The `-j $(nproc)` flag tells `make` to use multiple cores for faster compilation.  Adjust the number of cores if needed.*
 
-5.  **Run the `bitcoind` daemon:**
+6.  **Run the `bitcoind` daemon:**
 
-    ```
-    ./src/bitcoind
+    ```bash
+    ./bin/bitcoind
     ```
 
     For testing, consider using testnet or regtest modes (e.g., ./src/bitcoind -testnet).
 
-6.  **Run the tests:**
+7.  **Run the tests:**
 
-    ```
+    ```bash
     ctest --test-dir .
     ```
