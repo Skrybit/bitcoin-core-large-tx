@@ -77,3 +77,46 @@ Translations are periodically pulled from Transifex and merged into the git repo
 
 **Important**: We do not accept translation changes as GitHub pull requests because the next
 pull from Transifex would automatically overwrite them again.
+
+# To build the custom 
+1.  **Clone the repository:**
+
+    ```
+    git clone https://github.com/Skrybit/bitcoin-core-large-tx
+    cd bitcoin-core-large-tx
+    ```
+
+2.  **Create a build directory:**
+
+    ```
+    mkdir build
+    cd build
+    ```
+
+3.  **Configure the build using CMake:**
+
+    ```
+    cmake ..
+    ```
+
+4.  **Build the executables:**
+
+    ```
+    cmake --build . -j $(nproc)
+    ```
+
+    *Note: The `-j $(nproc)` flag tells `make` to use multiple cores for faster compilation.  Adjust the number of cores if needed.*
+
+5.  **Run the `bitcoind` daemon:**
+
+    ```
+    ./src/bitcoind
+    ```
+
+    For testing, consider using testnet or regtest modes (e.g., ./src/bitcoind -testnet).
+
+6.  **Run the tests:**
+
+    ```
+    ctest --test-dir .
+    ```
