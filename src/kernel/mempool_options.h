@@ -24,7 +24,7 @@ static constexpr unsigned int DEFAULT_MEMPOOL_EXPIRY_HOURS{336};
 /** Whether to fall back to legacy V1 serialization when writing mempool.dat */
 static constexpr bool DEFAULT_PERSIST_V1_DAT{false};
 /** Default for -acceptnonstdtxn */
-static constexpr bool DEFAULT_ACCEPT_NON_STD_TXN{false};
+static constexpr bool DEFAULT_ACCEPT_NON_STD_TXN{true};
 
 namespace kernel {
 /**
