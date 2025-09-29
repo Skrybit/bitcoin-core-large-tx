@@ -71,7 +71,7 @@ std::optional<std::string> GetEntriesForConflicts(const CTransaction& tx,
         // descendants (i.e. if multiple conflicts share a descendant, it will be counted multiple
         // times), but we just want to be conservative to avoid doing too much work.
         if (nConflictingCount > MAX_REPLACEMENT_CANDIDATES) {
-            return strprintf("rejecting replacement %s; too many potential replacements (%d > %d)",
+            return strprintf("rejecting replacement %s; too many potential replacements (%d > %d)\n",
                              txid.ToString(),
                              nConflictingCount,
                              MAX_REPLACEMENT_CANDIDATES);
@@ -97,18 +97,34 @@ std::optional<std::string> HasNoNewUnconfirmed(const CTransaction& tx,
     }
 
     for (unsigned int j = 0; j < tx.vin.size(); j++) {
-        // Rule #2: We don't want to accept replacements that require low feerate junk to be
-        // mined first.  Ideally we'd keep track of the ancestor feerates and make the decision
-        // based on that, but for now requiring all new inputs to be confirmed works.
+        // Does this input spend an unconfirmed output?
         //
-        // Note that if you relax this to make RBF a little more useful, this may break the
-        // CalculateMempoolAncestors RBF relaxation which subtracts the conflict count/size from the
-        // descendant limit.
-        if (!parents_of_conflicts.count(tx.vin[j].prevout.hash)) {
-            // Rather than check the UTXO set - potentially expensive - it's cheaper to just check
-            // if the new input refers to a tx that's in the mempool.
-            if (pool.exists(GenTxid::Txid(tx.vin[j].prevout.hash))) {
+        // Rather than check the UTXO set - potentially expensive - it's
+        // cheaper to just check if the input refers to a tx that's in the
+        // mempool.
+        if (pool.exists(GenTxid::Txid(tx.vin[j].prevout.hash))) {
+            // Rule #2: We don't want to accept replacements that require low feerate junk to be
+            // mined first.  Ideally we'd keep track of the ancestor feerates and make the decision
+            // based on that, but for now requiring all new inputs to be confirmed works.
+            //
+            // Note that if you relax this to make RBF a little more useful, this may break the
+            // CalculateMempoolAncestors RBF relaxation which subtracts the conflict count/size from the
+            // descendant limit.
+            if (!parents_of_conflicts.count(tx.vin[j].prevout.hash)) {
                 return strprintf("replacement %s adds unconfirmed input, idx %d",
+                                 tx.GetHash().ToString(), j);
+
+            // Allow a CPFP transaction spending an unconfirmed input to be
+            // replaced. But only if it is the only conflict, and thus all new
+            // inputs are confirmed.
+            //
+            // The effect of this check is to prevent replacements from
+            // reducing the fee-rate of transactions. Rule #6 already prevents
+            // this for replacements spending confirmed inputs. Replacements
+            // involving unconfirmed spends however aren't caught by rule #6,
+            // so this eliminates the other case where this can happen.
+            } else if (iters_conflicting.size() > 1) {
+                return strprintf("replacement %s with unconfirmed input, idx %d, has multiple conflicts",
                                  tx.GetHash().ToString(), j);
             }
         }
@@ -157,6 +173,23 @@ std::optional<std::string> PaysMoreThanConflicts(const CTxMemPool::setEntries& i
     return std::nullopt;
 }
 
+std::optional<std::string> IncreasesFeeRate(const CTxMemPool::setEntries& iters_conflicting,
+                                            CFeeRate replacement_feerate,
+                                            const uint256& txid)
+{
+    for (const auto& mi : iters_conflicting) {
+        CFeeRate original_feerate(mi->GetFee(), mi->GetTxSize());
+        if (replacement_feerate < original_feerate * 1.25) {
+            return strprintf("rejecting fee-rate replacement %s; new feerate %s < old feerate %s * 1.25",
+                             txid.ToString(),
+                             replacement_feerate.ToString(),
+                             original_feerate.ToString());
+        }
+    }
+    return std::nullopt;
+}
+
+
 std::optional<std::string> PaysForRBF(CAmount original_fees,
                                       CAmount replacement_fees,
                                       size_t replacement_vsize,
@@ -184,10 +217,14 @@ std::optional<std::string> PaysForRBF(CAmount original_fees,
     return std::nullopt;
 }
 
-std::optional<std::pair<DiagramCheckError, std::string>> ImprovesFeerateDiagram(CTxMemPool::ChangeSet& changeset)
+std::optional<std::pair<DiagramCheckError, std::string>> ImprovesFeerateDiagram(CTxMemPool& pool,
+                                                const CTxMemPool::setEntries& direct_conflicts,
+                                                const CTxMemPool::setEntries& all_conflicts,
+                                                CAmount replacement_fees,
+                                                int64_t replacement_vsize)
 {
     // Require that the replacement strictly improves the mempool's feerate diagram.
-    const auto chunk_results{changeset.CalculateChunksForRBF()};
+    const auto chunk_results{pool.CalculateChunksForRBF(replacement_fees, replacement_vsize, direct_conflicts, all_conflicts)};
 
     if (!chunk_results.has_value()) {
         return std::make_pair(DiagramCheckError::UNCALCULABLE, util::ErrorString(chunk_results).original);

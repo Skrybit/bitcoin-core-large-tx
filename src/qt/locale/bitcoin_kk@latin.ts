@@ -659,6 +659,10 @@
         <translation type="unfinished">Әмиян</translation>
     </message>
     <message>
+        <source>Map port using &amp;UPnP</source>
+        <translation type="unfinished">UPnP арқылы порт &amp;сәйкестендіру</translation>
+    </message>
+    <message>
         <source>&amp;Window</source>
         <translation type="unfinished">&amp;Терезе</translation>
     </message>

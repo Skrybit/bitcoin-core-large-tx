@@ -45,7 +45,7 @@ enum class AddressPurpose;
 enum isminetype : unsigned int;
 struct CRecipient;
 struct WalletContext;
-using isminefilter = std::underlying_type_t<isminetype>;
+using isminefilter = std::underlying_type<isminetype>::type;
 } // namespace wallet
 
 namespace interfaces {

@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-present The Bitcoin Core developers
+// Copyright (c) 2009-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -67,15 +67,6 @@ bool IsDust(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
     return (txout.nValue < GetDustThreshold(txout, dustRelayFeeIn));
 }
 
-std::vector<uint32_t> GetDust(const CTransaction& tx, CFeeRate dust_relay_rate)
-{
-    std::vector<uint32_t> dust_outputs;
-    for (uint32_t i{0}; i < tx.vout.size(); ++i) {
-        if (IsDust(tx.vout[i], dust_relay_rate)) dust_outputs.push_back(i);
-    }
-    return dust_outputs;
-}
-
 bool IsStandard(const CScript& scriptPubKey, const std::optional<unsigned>& max_datacarrier_bytes, TxoutType& whichType)
 {
     std::vector<std::vector<unsigned char> > vSolutions;
@@ -137,7 +128,7 @@ bool IsStandardTx(const CTransaction& tx, const std::optional<unsigned>& max_dat
         }
     }
 
-    unsigned int nDataOut = 0;
+    //unsigned int nDataOut = 0;
     TxoutType whichType;
     for (const CTxOut& txout : tx.vout) {
         if (!::IsStandard(txout.scriptPubKey, max_datacarrier_bytes, whichType)) {
@@ -145,25 +136,22 @@ bool IsStandardTx(const CTransaction& tx, const std::optional<unsigned>& max_dat
             return false;
         }
 
-        if (whichType == TxoutType::NULL_DATA)
-            nDataOut++;
-        else if ((whichType == TxoutType::MULTISIG) && (!permit_bare_multisig)) {
+        if (whichType == TxoutType::NULL_DATA) {
+            // nDataOut++;
+        } else if ((whichType == TxoutType::MULTISIG) && (!permit_bare_multisig)) {
             reason = "bare-multisig";
+            return false;
+        } else if (IsDust(txout, dust_relay_fee)) {
+            reason = "dust";
             return false;
         }
     }
 
-    // Only MAX_DUST_OUTPUTS_PER_TX dust is permitted(on otherwise valid ephemeral dust)
-    if (GetDust(tx, dust_relay_fee).size() > MAX_DUST_OUTPUTS_PER_TX) {
-        reason = "dust";
-        return false;
-    }
-
     // only one OP_RETURN txout is permitted
-    if (nDataOut > 1) {
-        reason = "multi-op-return";
-        return false;
-    }
+    //if (nDataOut > 1) {
+    //    reason = "multi-op-return";
+    //    return false;
+    //}
 
     return true;
 }
@@ -220,10 +208,39 @@ bool AreInputsStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
     return true;
 }
 
+bool IsAnnexStandard(const std::vector<unsigned char>& annex)
+{
+    // If we are incorrectly called on a zero-sized vector, which is not
+    // actually an annex, just return false to avoid an out-of-bounds index
+    // later.
+    if (annex.size() == 0) {
+        return false;
+    }
+
+    // Get the size of the annex excluding the tag byte.
+    size_t annex_size = annex.size() - 1;
+
+    // Allow an empty annex. This allows inputs to opt-in to annex
+    // usage with the minimal number of bytes.
+    if (annex_size == 0) {
+        return true;
+    }
+
+    // Deny a non-empty annex, unless it starts with the byte 0x00
+    if (annex[1] != 0) {
+        return false;
+    }
+
+    return true;
+}
+
 bool IsWitnessStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
 {
     if (tx.IsCoinBase())
         return true; // Coinbases are skipped
+
+    // Track the number of inputs that commit to an annex.
+    unsigned int annex_input_count = 0;
 
     for (unsigned int i = 0; i < tx.vin.size(); i++)
     {
@@ -281,10 +298,19 @@ bool IsWitnessStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
         // - No annexes
         if (witnessversion == 1 && witnessprogram.size() == WITNESS_V1_TAPROOT_SIZE && !p2sh) {
             // Taproot spend (non-P2SH-wrapped, version 1, witness program size 32; see BIP 341)
-            std::span stack{tx.vin[i].scriptWitness.stack};
+            Span stack{tx.vin[i].scriptWitness.stack};
             if (stack.size() >= 2 && !stack.back().empty() && stack.back()[0] == ANNEX_TAG) {
-                // Annexes are nonstandard as long as no semantics are defined for them.
-                return false;
+                // An annex is present. Remove it from the stack and save it for
+                // standardness checks.
+                const auto& annex = SpanPopBack(stack);
+
+                // Check that the annex is standard.
+                if (!IsAnnexStandard(annex)) {
+                    return false;
+                }
+
+                // Increment the number of inputs that commit to an annex.
+                annex_input_count++;
             }
             if (stack.size() >= 2) {
                 // Script path spend (2 or more stack elements after removing optional annex)
@@ -306,6 +332,12 @@ bool IsWitnessStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
             }
         }
     }
+
+    // If any inputs commit to an annex, all inputs must commit to an annex.
+    if (annex_input_count > 0 && annex_input_count != tx.vin.size()) {
+        return false;
+    }
+
     return true;
 }
 

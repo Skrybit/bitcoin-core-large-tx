@@ -6,8 +6,6 @@
 
 #include <netaddress.h>
 #include <netbase.h>
-#include <test/fuzz/util/check_globals.h>
-#include <test/util/coverage.h>
 #include <test/util/random.h>
 #include <test/util/setup_common.h>
 #include <util/check.h>
@@ -37,6 +35,8 @@ __AFL_FUZZ_INIT();
 
 const std::function<void(const std::string&)> G_TEST_LOG_FUN{};
 
+const std::function<std::string()> G_TEST_GET_FULL_NAME{};
+
 /**
  * A copy of the command line arguments that start with `--`.
  * First `LLVMFuzzerInitialize()` is called, which saves the arguments to `g_args`.
@@ -49,7 +49,7 @@ static std::vector<const char*> g_args;
 static void SetArgs(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         // Only take into account arguments that start with `--`. The others are for the fuzz engine:
-        // `fuzz -runs=1 fuzz_corpora/address_deserialize_v2 --checkaddrman=5`
+        // `fuzz -runs=1 fuzz_seed_corpus/address_deserialize_v2 --checkaddrman=5`
         if (strlen(argv[i]) > 2 && argv[i][0] == '-' && argv[i][1] == '-') {
             g_args.push_back(argv[i]);
         }
@@ -80,26 +80,33 @@ void FuzzFrameworkRegisterTarget(std::string_view name, TypeTestOneInput target,
 static std::string_view g_fuzz_target;
 static const TypeTestOneInput* g_test_one_input{nullptr};
 
-static void test_one_input(FuzzBufferType buffer)
+
+#if defined(__clang__) && defined(__linux__)
+extern "C" void __llvm_profile_reset_counters(void) __attribute__((weak));
+extern "C" void __gcov_reset(void) __attribute__((weak));
+
+void ResetCoverageCounters()
 {
-    CheckGlobals check{};
-    (*Assert(g_test_one_input))(buffer);
+    if (__llvm_profile_reset_counters) {
+        __llvm_profile_reset_counters();
+    }
+
+    if (__gcov_reset) {
+        __gcov_reset();
+    }
 }
+#else
+void ResetCoverageCounters() {}
+#endif
 
-const std::function<std::string()> G_TEST_GET_FULL_NAME{[]{
-    return std::string{g_fuzz_target};
-}};
 
-static void initialize()
+void initialize()
 {
     // By default, make the RNG deterministic with a fixed seed. This will affect all
     // randomness during the fuzz test, except:
     // - GetStrongRandBytes(), which is used for the creation of private key material.
-    // - Randomness obtained before this call in g_rng_temp_path_init
-    SeedRandomStateForTest(SeedRand::ZEROS);
-
-    // Set time to the genesis block timestamp for deterministic initialization.
-    SetMockTime(1231006505);
+    // - Creating a BasicTestingSetup or derived class will switch to a random seed.
+    SeedRandomForTest(SeedRand::ZEROS);
 
     // Terminate immediately if a fuzzing harness ever tries to create a socket.
     // Individual tests can override this by pointing CreateSock to a mocked alternative.
@@ -145,10 +152,6 @@ static void initialize()
     const auto it = FuzzTargets().find(g_fuzz_target);
     if (it == FuzzTargets().end()) {
         std::cerr << "No fuzz target compiled for " << g_fuzz_target << "." << std::endl;
-        std::exit(EXIT_FAILURE);
-    }
-    if constexpr (!G_FUZZING) {
-        std::cerr << "Must compile with -DBUILD_FOR_FUZZING=ON to execute a fuzz target." << std::endl;
         std::exit(EXIT_FAILURE);
     }
     Assert(!g_test_one_input);
@@ -202,6 +205,7 @@ void signal_handler(int signal)
 // This function is used by libFuzzer
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
+    static const auto& test_one_input = *Assert(g_test_one_input);
     test_one_input({data, size});
     return 0;
 }
@@ -218,6 +222,7 @@ extern "C" int LLVMFuzzerInitialize(int* argc, char*** argv)
 int main(int argc, char** argv)
 {
     initialize();
+    static const auto& test_one_input = *Assert(g_test_one_input);
 #ifdef __AFL_LOOP
     // Enable AFL persistent mode. Requires compilation using afl-clang-fast++.
     // See fuzzing.md for details.

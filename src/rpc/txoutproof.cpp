@@ -10,7 +10,6 @@
 #include <merkleblock.h>
 #include <node/blockstorage.h>
 #include <primitives/transaction.h>
-#include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/server_util.h>
 #include <rpc/util.h>
@@ -97,12 +96,8 @@ static RPCHelpMan gettxoutproof()
                 }
             }
 
-            {
-                LOCK(cs_main);
-                CheckBlockDataAvailability(chainman.m_blockman, *pblockindex, /*check_for_undo=*/false);
-            }
             CBlock block;
-            if (!chainman.m_blockman.ReadBlock(block, *pblockindex)) {
+            if (!chainman.m_blockman.ReadBlockFromDisk(block, *pblockindex)) {
                 throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
             }
 

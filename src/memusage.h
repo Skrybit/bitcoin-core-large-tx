@@ -15,7 +15,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <string>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
@@ -85,22 +84,10 @@ struct stl_shared_counter
     size_t weak_count;
 };
 
-template<typename T, typename Allocator>
-static inline size_t DynamicUsage(const std::vector<T, Allocator>& v)
+template<typename X>
+static inline size_t DynamicUsage(const std::vector<X>& v)
 {
-    return MallocUsage(v.capacity() * sizeof(T));
-}
-
-static inline size_t DynamicUsage(const std::string& s)
-{
-    const char* s_ptr = reinterpret_cast<const char*>(&s);
-    // Don't count the dynamic memory used for string, if it resides in the
-    // "small string" optimization area (which stores data inside the object itself, up to some
-    // size; 15 bytes in modern libstdc++).
-    if (!std::less{}(s.data(), s_ptr) && !std::greater{}(s.data() + s.size(), s_ptr + sizeof(s))) {
-        return 0;
-    }
-    return MallocUsage(s.capacity());
+    return MallocUsage(v.capacity() * sizeof(X));
 }
 
 template<unsigned int N, typename X, typename S, typename D>

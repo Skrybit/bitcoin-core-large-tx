@@ -65,9 +65,8 @@ BPF_PERF_OUTPUT(replaced_events);
 
 int trace_added(struct pt_regs *ctx) {
   struct added_event added = {};
-  void *phash = NULL;
-  bpf_usdt_readarg(1, ctx, phash);
-  bpf_probe_read_user(&added.hash, sizeof(added.hash), phash);
+
+  bpf_usdt_readarg_p(1, ctx, &added.hash, HASH_LENGTH);
   bpf_usdt_readarg(2, ctx, &added.vsize);
   bpf_usdt_readarg(3, ctx, &added.fee);
 
@@ -77,11 +76,9 @@ int trace_added(struct pt_regs *ctx) {
 
 int trace_removed(struct pt_regs *ctx) {
   struct removed_event removed = {};
-  void *phash = NULL, *preason = NULL;
-  bpf_usdt_readarg(1, ctx, phash);
-  bpf_probe_read_user(&removed.hash, sizeof(removed.hash), phash);
-  bpf_usdt_readarg(1, ctx, preason);
-  bpf_probe_read_user_str(&removed.reason, sizeof(removed.reason), preason);
+
+  bpf_usdt_readarg_p(1, ctx, &removed.hash, HASH_LENGTH);
+  bpf_usdt_readarg_p(2, ctx, &removed.reason, MAX_REMOVAL_REASON_LENGTH);
   bpf_usdt_readarg(3, ctx, &removed.vsize);
   bpf_usdt_readarg(4, ctx, &removed.fee);
   bpf_usdt_readarg(5, ctx, &removed.entry_time);
@@ -92,25 +89,22 @@ int trace_removed(struct pt_regs *ctx) {
 
 int trace_rejected(struct pt_regs *ctx) {
   struct rejected_event rejected = {};
-  void *phash = NULL, *preason = NULL;
-  bpf_usdt_readarg(1, ctx, phash);
-  bpf_probe_read_user(&rejected.hash, sizeof(rejected.hash), phash);
-  bpf_usdt_readarg(1, ctx, preason);
-  bpf_probe_read_user_str(&rejected.reason, sizeof(rejected.reason), preason);
+
+  bpf_usdt_readarg_p(1, ctx, &rejected.hash, HASH_LENGTH);
+  bpf_usdt_readarg_p(2, ctx, &rejected.reason, MAX_REJECT_REASON_LENGTH);
+
   rejected_events.perf_submit(ctx, &rejected, sizeof(rejected));
   return 0;
 }
 
 int trace_replaced(struct pt_regs *ctx) {
   struct replaced_event replaced = {};
-  void *phash_replaced = NULL, *phash_replacement = NULL;
-  bpf_usdt_readarg(1, ctx, phash_replaced);
-  bpf_probe_read_user(&replaced.replaced_hash, sizeof(replaced.replaced_hash), phash_replaced);
+
+  bpf_usdt_readarg_p(1, ctx, &replaced.replaced_hash, HASH_LENGTH);
   bpf_usdt_readarg(2, ctx, &replaced.replaced_vsize);
   bpf_usdt_readarg(3, ctx, &replaced.replaced_fee);
   bpf_usdt_readarg(4, ctx, &replaced.replaced_entry_time);
-  bpf_usdt_readarg(5, ctx, phash_replacement);
-  bpf_probe_read_user(&replaced.replacement_hash, sizeof(replaced.replacement_hash), phash_replacement);
+  bpf_usdt_readarg_p(5, ctx, &replaced.replacement_hash, HASH_LENGTH);
   bpf_usdt_readarg(6, ctx, &replaced.replacement_vsize);
   bpf_usdt_readarg(7, ctx, &replaced.replacement_fee);
 
@@ -120,9 +114,8 @@ int trace_replaced(struct pt_regs *ctx) {
 """
 
 
-def main(pid):
-    print(f"Hooking into bitcoind with pid {pid}")
-    bitcoind_with_usdts = USDT(pid=int(pid))
+def main(bitcoind_path):
+    bitcoind_with_usdts = USDT(path=str(bitcoind_path))
 
     # attaching the trace functions defined in the BPF program
     # to the tracepoints
@@ -372,8 +365,8 @@ class Dashboard:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("USAGE: ", sys.argv[0], "<pid of bitcoind>")
+        print("USAGE: ", sys.argv[0], "path/to/bitcoind")
         exit(1)
 
-    pid = sys.argv[1]
-    main(pid)
+    path = sys.argv[1]
+    main(path)

@@ -33,8 +33,6 @@ from test_framework.util import assert_equal
 
 MAX_LOCATOR_SZ = 101
 MAX_BLOCK_WEIGHT = 4000000
-DEFAULT_BLOCK_RESERVED_WEIGHT = 8000
-MINIMUM_BLOCK_RESERVED_WEIGHT = 2000
 MAX_BLOOM_FILTER_SIZE = 36000
 MAX_BLOOM_HASH_FUNCS = 50
 
@@ -55,6 +53,8 @@ NODE_WITNESS = (1 << 3)
 NODE_COMPACT_FILTERS = (1 << 6)
 NODE_NETWORK_LIMITED = (1 << 10)
 NODE_P2P_V2 = (1 << 11)
+NODE_FULL_RBF = (1 << 26)
+NODE_LIBRE = (1 << 29)
 
 MSG_TX = 1
 MSG_BLOCK = 2
@@ -118,26 +118,6 @@ def deser_compact_size(f):
     elif nit == 255:
         nit = int.from_bytes(f.read(8), "little")
     return nit
-
-
-def ser_varint(l):
-    r = b""
-    while True:
-        r = bytes([(l & 0x7f) | (0x80 if len(r) > 0 else 0x00)]) + r
-        if l <= 0x7f:
-            return r
-        l = (l >> 7) - 1
-
-
-def deser_varint(f):
-    n = 0
-    while True:
-        dat = f.read(1)[0]
-        n = (n << 7) | (dat & 0x7f)
-        if (dat & 0x80) > 0:
-            n += 1
-        else:
-            return n
 
 
 def deser_string(f):
@@ -349,7 +329,7 @@ class CAddress:
         elif self.net == self.NET_CJDNS:
             self.ip = socket.inet_ntop(socket.AF_INET6, addr_bytes)
         else:
-            raise Exception("Address type not supported")
+            raise Exception(f"Address type not supported")
 
         self.port = int.from_bytes(f.read(2), "big")
 
@@ -376,7 +356,7 @@ class CAddress:
         elif self.net == self.NET_CJDNS:
             r += socket.inet_pton(socket.AF_INET6, self.ip)
         else:
-            raise Exception("Address type not supported")
+            raise Exception(f"Address type not supported")
         r += self.port.to_bytes(2, "big")
         return r
 
@@ -1933,20 +1913,3 @@ class TestFrameworkScript(unittest.TestCase):
         check_addrv2("2bqghnldu6mcug4pikzprwhtjjnsyederctvci6klcwzepnjd46ikjyd.onion", CAddress.NET_TORV3)
         check_addrv2("255fhcp6ajvftnyo7bwz3an3t4a4brhopm3bamyh2iu5r3gnr2rq.b32.i2p", CAddress.NET_I2P)
         check_addrv2("fc32:17ea:e415:c3bf:9808:149d:b5a2:c9aa", CAddress.NET_CJDNS)
-
-    def test_varint_encode_decode(self):
-        def check_varint(num, expected_encoding_hex):
-            expected_encoding = bytes.fromhex(expected_encoding_hex)
-            self.assertEqual(ser_varint(num), expected_encoding)
-            self.assertEqual(deser_varint(BytesIO(expected_encoding)), num)
-
-        # test cases from serialize_tests.cpp:varint_bitpatterns
-        check_varint(0, "00")
-        check_varint(0x7f, "7f")
-        check_varint(0x80, "8000")
-        check_varint(0x1234, "a334")
-        check_varint(0xffff, "82fe7f")
-        check_varint(0x123456, "c7e756")
-        check_varint(0x80123456, "86ffc7e756")
-        check_varint(0xffffffff, "8efefefe7f")
-        check_varint(0xffffffffffffffff, "80fefefefefefefefe7f")

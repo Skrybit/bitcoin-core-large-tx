@@ -3,23 +3,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-#include <bench/data/block413567.raw.h>
-#include <chain.h>
-#include <core_io.h>
-#include <primitives/block.h>
-#include <primitives/transaction.h>
+#include <bench/data.h>
+
 #include <rpc/blockchain.h>
-#include <serialize.h>
-#include <span.h>
 #include <streams.h>
 #include <test/util/setup_common.h>
-#include <uint256.h>
-#include <univalue.h>
+#include <util/chaintype.h>
 #include <validation.h>
 
-#include <cstddef>
-#include <memory>
-#include <vector>
+#include <univalue.h>
 
 namespace {
 
@@ -48,9 +40,8 @@ struct TestBlockAndIndex {
 static void BlockToJsonVerbose(benchmark::Bench& bench)
 {
     TestBlockAndIndex data;
-    const uint256 pow_limit{data.testing_setup->m_node.chainman->GetParams().GetConsensus().powLimit};
     bench.run([&] {
-        auto univalue = blockToJSON(data.testing_setup->m_node.chainman->m_blockman, data.block, data.blockindex, data.blockindex, TxVerbosity::SHOW_DETAILS_AND_PREVOUT, pow_limit);
+        auto univalue = blockToJSON(data.testing_setup->m_node.chainman->m_blockman, data.block, data.blockindex, data.blockindex, TxVerbosity::SHOW_DETAILS_AND_PREVOUT);
         ankerl::nanobench::doNotOptimizeAway(univalue);
     });
 }
@@ -60,8 +51,7 @@ BENCHMARK(BlockToJsonVerbose, benchmark::PriorityLevel::HIGH);
 static void BlockToJsonVerboseWrite(benchmark::Bench& bench)
 {
     TestBlockAndIndex data;
-    const uint256 pow_limit{data.testing_setup->m_node.chainman->GetParams().GetConsensus().powLimit};
-    auto univalue = blockToJSON(data.testing_setup->m_node.chainman->m_blockman, data.block, data.blockindex, data.blockindex, TxVerbosity::SHOW_DETAILS_AND_PREVOUT, pow_limit);
+    auto univalue = blockToJSON(data.testing_setup->m_node.chainman->m_blockman, data.block, data.blockindex, data.blockindex, TxVerbosity::SHOW_DETAILS_AND_PREVOUT);
     bench.run([&] {
         auto str = univalue.write();
         ankerl::nanobench::doNotOptimizeAway(str);

@@ -45,14 +45,13 @@ void initialize_process_message()
             {.extra_args = {"-txreconciliation"}});
     g_setup = testing_setup.get();
     for (int i = 0; i < 2 * COINBASE_MATURITY; i++) {
-        MineBlock(g_setup->m_node, {});
+        MineBlock(g_setup->m_node, CScript() << OP_TRUE);
     }
     g_setup->m_node.validation_signals->SyncWithValidationInterfaceQueue();
 }
 
 FUZZ_TARGET(process_message, .init = initialize_process_message)
 {
-    SeedRandomStateForTest(SeedRand::ZEROS);
     FuzzedDataProvider fuzzed_data_provider(buffer.data(), buffer.size());
 
     ConnmanTestMsg& connman = *static_cast<ConnmanTestMsg*>(g_setup->m_node.connman.get());
@@ -62,7 +61,7 @@ FUZZ_TARGET(process_message, .init = initialize_process_message)
 
     LOCK(NetEventsInterface::g_msgproc_mutex);
 
-    const std::string random_message_type{fuzzed_data_provider.ConsumeBytesAsString(CMessageHeader::MESSAGE_TYPE_SIZE).c_str()};
+    const std::string random_message_type{fuzzed_data_provider.ConsumeBytesAsString(CMessageHeader::COMMAND_SIZE).c_str()};
     if (!LIMIT_TO_MESSAGE_TYPE.empty() && random_message_type != LIMIT_TO_MESSAGE_TYPE) {
         return;
     }

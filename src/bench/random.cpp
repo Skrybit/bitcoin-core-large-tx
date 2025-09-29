@@ -5,9 +5,7 @@
 #include <bench/bench.h>
 #include <random.h>
 
-#include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <numeric>
 
 namespace {

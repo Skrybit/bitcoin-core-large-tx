@@ -23,7 +23,7 @@
     </message>
     <message>
         <source>C&amp;lose</source>
-        <translation type="unfinished">Caleb Payne Phd</translation>
+        <translation type="unfinished">&amp;Fermi</translation>
     </message>
     <message>
         <source>Delete the currently selected address from the list</source>
@@ -432,8 +432,8 @@ Signing is only possible with addresses of the type 'legacy'.</source>
     <message numerus="yes">
         <source>Processed %n block(s) of transaction history.</source>
         <translation type="unfinished">
-            <numerusform>Processed %n block(s) of transaction history.</numerusform>
-            <numerusform>Processed %n block(s) of transaction history.</numerusform>
+            <numerusform />
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -501,8 +501,8 @@ Signing is only possible with addresses of the type 'legacy'.</source>
         <source>%n active connection(s) to Bitcoin network.</source>
         <extracomment>A substring of the tooltip.</extracomment>
         <translation type="unfinished">
-            <numerusform>%n active connection(s) to Bitcoin network.</numerusform>
-            <numerusform>%n active connection(s) to Bitcoin network.</numerusform>
+            <numerusform />
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -837,23 +837,23 @@ Signing is only possible with addresses of the type 'legacy'.</source>
     <message numerus="yes">
         <source>(of %n GB needed)</source>
         <translation type="unfinished">
-            <numerusform>(of %n GB needed)</numerusform>
-            <numerusform>(of %n GB needed)</numerusform>
+            <numerusform />
+            <numerusform />
         </translation>
     </message>
     <message numerus="yes">
         <source>(%n GB needed for full chain)</source>
         <translation type="unfinished">
-            <numerusform>(%n GB needed for full chain)</numerusform>
-            <numerusform>(%n GB needed for full chain)</numerusform>
+            <numerusform />
+            <numerusform />
         </translation>
     </message>
     <message numerus="yes">
         <source>(sufficient to restore backups %n day(s) old)</source>
         <extracomment>Explanatory text on the capability of the current prune target.</extracomment>
         <translation type="unfinished">
-            <numerusform>(sufficient to restore backups %n day(s) old)</numerusform>
-            <numerusform>(sufficient to restore backups %n day(s) old)</numerusform>
+            <numerusform />
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -991,6 +991,14 @@ Signing is only possible with addresses of the type 'legacy'.</source>
     <message>
         <source>Expert</source>
         <translation type="unfinished">Fakulo</translation>
+    </message>
+    <message>
+        <source>Automatically open the Bitcoin client port on the router. This only works when your router supports UPnP and it is enabled.</source>
+        <translation type="unfinished">Aŭtomate malfermi la kursilan pordon por Bitmono. Tio funkcias nur se via kursilo havas la UPnP-funkcion, kaj se tiu ĉi estas ŝaltita.</translation>
+    </message>
+    <message>
+        <source>Map port using &amp;UPnP</source>
+        <translation type="unfinished">Mapigi pordon per &amp;UPnP</translation>
     </message>
     <message>
         <source>Proxy &amp;IP:</source>
@@ -1584,8 +1592,8 @@ Signing is only possible with addresses of the type 'legacy'.</source>
     <message numerus="yes">
         <source>Estimated to begin confirmation within %n block(s).</source>
         <translation type="unfinished">
-            <numerusform>Estimated to begin confirmation within %n block(s).</numerusform>
-            <numerusform>Estimated to begin confirmation within %n block(s).</numerusform>
+            <numerusform />
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -1805,8 +1813,8 @@ Signing is only possible with addresses of the type 'legacy'.</source>
     <message numerus="yes">
         <source>matures in %n more block(s)</source>
         <translation type="unfinished">
-            <numerusform>matures in %n more block(s)</numerusform>
-            <numerusform>matures in %n more block(s)</numerusform>
+            <numerusform />
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -2084,6 +2092,10 @@ Signing is only possible with addresses of the type 'legacy'.</source>
         <translation type="unfinished">Difektita blokdatumbazo trovita</translation>
     </message>
     <message>
+        <source>Do you want to rebuild the block database now?</source>
+        <translation type="unfinished">Ĉu vi volas rekonstrui la blokdatumbazon nun?</translation>
+    </message>
+    <message>
         <source>Done loading</source>
         <translation type="unfinished">Ŝargado finiĝis</translation>
     </message>
@@ -2114,6 +2126,10 @@ Signing is only possible with addresses of the type 'legacy'.</source>
     <message>
         <source>Insufficient funds</source>
         <translation type="unfinished">Nesufiĉa mono</translation>
+    </message>
+    <message>
+        <source>Not enough file descriptors available.</source>
+        <translation type="unfinished">Nesufiĉa nombro de dosierpriskribiloj disponeblas.</translation>
     </message>
     <message>
         <source>Signing transaction failed</source>

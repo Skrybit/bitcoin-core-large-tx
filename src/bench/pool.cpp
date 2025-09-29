@@ -5,11 +5,7 @@
 #include <bench/bench.h>
 #include <support/allocators/pool.h>
 
-#include <cstddef>
-#include <cstdint>
-#include <functional>
 #include <unordered_map>
-#include <utility>
 
 template <typename Map>
 void BenchFillClearMap(benchmark::Bench& bench, Map& map)

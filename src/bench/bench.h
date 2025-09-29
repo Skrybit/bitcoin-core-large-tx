@@ -5,17 +5,16 @@
 #ifndef BITCOIN_BENCH_BENCH_H
 #define BITCOIN_BENCH_BENCH_H
 
-#include <bench/nanobench.h> // IWYU pragma: export
 #include <util/fs.h>
 #include <util/macros.h>
 
 #include <chrono>
-#include <cstdint>
 #include <functional>
 #include <map>
 #include <string>
-#include <utility>
 #include <vector>
+
+#include <bench/nanobench.h> // IWYU pragma: export
 
 /*
  * Usage:
@@ -61,7 +60,6 @@ struct Args {
     fs::path output_json;
     std::string regex_filter;
     uint8_t priority;
-    std::vector<std::string> setup_args;
 };
 
 class BenchRunner

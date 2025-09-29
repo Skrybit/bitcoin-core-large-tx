@@ -10,7 +10,6 @@
 #include <script/sign.h>
 #include <script/signingprovider.h>
 #include <test/util/setup_common.h>
-#include <test/util/transaction_utils.h>
 #include <tinyformat.h>
 #include <uint256.h>
 

@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <config/bitcoin-config.h> // IWYU pragma: keep
 
 #include <chainparamsbase.h>
 #include <clientversion.h>
@@ -41,7 +41,7 @@ static bool fCreateBlank;
 static std::map<std::string,UniValue> registers;
 static const int CONTINUE_EXECUTION=-1;
 
-const TranslateFn G_TRANSLATION_FUN{nullptr};
+const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr;
 
 static void SetupBitcoinTxArgs(ArgsManager &argsman)
 {
@@ -105,19 +105,16 @@ static int AppInitRawTx(int argc, char* argv[])
 
     fCreateBlank = gArgs.GetBoolArg("-create", false);
 
-    if (argc < 2 || HelpRequested(gArgs) || gArgs.GetBoolArg("-version", false)) {
+    if (argc < 2 || HelpRequested(gArgs) || gArgs.IsArgSet("-version")) {
         // First part of help message is specific to this utility
-        std::string strUsage = CLIENT_NAME " bitcoin-tx utility version " + FormatFullVersion() + "\n";
+        std::string strUsage = PACKAGE_NAME " bitcoin-tx utility version " + FormatFullVersion() + "\n";
 
-        if (gArgs.GetBoolArg("-version", false)) {
+        if (gArgs.IsArgSet("-version")) {
             strUsage += FormatParagraph(LicenseInfo());
         } else {
             strUsage += "\n"
-                "The bitcoin-tx tool is used for creating and modifying bitcoin transactions.\n\n"
-                "bitcoin-tx can be used with \"<hex-tx> [commands]\" to update a hex-encoded bitcoin transaction, or with \"-create [commands]\" to create a hex-encoded bitcoin transaction.\n"
-                "\n"
-                "Usage: bitcoin-tx [options] <hex-tx> [commands]\n"
-                "or:    bitcoin-tx [options] -create [commands]\n"
+                "Usage:  bitcoin-tx [options] <hex-tx> [commands]  Update hex-encoded bitcoin transaction\n"
+                "or:     bitcoin-tx [options] -create [commands]   Create hex-encoded bitcoin transaction\n"
                 "\n";
             strUsage += gArgs.GetHelpMessage();
         }
@@ -304,7 +301,7 @@ static void MutateTxAddOutAddr(CMutableTransaction& tx, const std::string& strIn
     CAmount value = ExtractAndValidateValue(vStrInputParts[0]);
 
     // extract and validate ADDRESS
-    const std::string& strAddr = vStrInputParts[1];
+    std::string strAddr = vStrInputParts[1];
     CTxDestination destination = DecodeDestination(strAddr);
     if (!IsValidDestination(destination)) {
         throw std::runtime_error("invalid TX output address");
@@ -337,7 +334,7 @@ static void MutateTxAddOutPubKey(CMutableTransaction& tx, const std::string& str
     bool bSegWit = false;
     bool bScriptHash = false;
     if (vStrInputParts.size() == 3) {
-        const std::string& flags = vStrInputParts[2];
+        std::string flags = vStrInputParts[2];
         bSegWit = (flags.find('W') != std::string::npos);
         bScriptHash = (flags.find('S') != std::string::npos);
     }
@@ -398,7 +395,7 @@ static void MutateTxAddOutMultiSig(CMutableTransaction& tx, const std::string& s
     bool bSegWit = false;
     bool bScriptHash = false;
     if (vStrInputParts.size() == numkeys + 4) {
-        const std::string& flags = vStrInputParts.back();
+        std::string flags = vStrInputParts.back();
         bSegWit = (flags.find('W') != std::string::npos);
         bScriptHash = (flags.find('S') != std::string::npos);
     }
@@ -473,14 +470,14 @@ static void MutateTxAddOutScript(CMutableTransaction& tx, const std::string& str
     CAmount value = ExtractAndValidateValue(vStrInputParts[0]);
 
     // extract and validate script
-    const std::string& strScript = vStrInputParts[1];
+    std::string strScript = vStrInputParts[1];
     CScript scriptPubKey = ParseScript(strScript);
 
     // Extract FLAGS
     bool bSegWit = false;
     bool bScriptHash = false;
     if (vStrInputParts.size() == 3) {
-        const std::string& flags = vStrInputParts.back();
+        std::string flags = vStrInputParts.back();
         bSegWit = (flags.find('W') != std::string::npos);
         bScriptHash = (flags.find('S') != std::string::npos);
     }

@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-present The Bitcoin Core developers
+// Copyright (c) 2009-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -25,7 +25,7 @@
 #include <vector>
 
 namespace util {
-inline void Xor(std::span<std::byte> write, std::span<const std::byte> key, size_t key_offset = 0)
+inline void Xor(Span<std::byte> write, Span<const std::byte> key, size_t key_offset = 0)
 {
     if (key.size() == 0) {
         return;
@@ -71,7 +71,7 @@ public:
     {
         ::SerializeMany(*this, std::forward<Args>(args)...);
     }
-    void write(std::span<const std::byte> src)
+    void write(Span<const std::byte> src)
     {
         assert(nPos <= vchData.size());
         size_t nOverwrite = std::min(src.size(), vchData.size() - nPos);
@@ -79,7 +79,7 @@ public:
             memcpy(vchData.data() + nPos, src.data(), nOverwrite);
         }
         if (nOverwrite < src.size()) {
-            vchData.insert(vchData.end(), UCharCast(src.data()) + nOverwrite, UCharCast(src.data() + src.size()));
+            vchData.insert(vchData.end(), UCharCast(src.data()) + nOverwrite, UCharCast(src.end()));
         }
         nPos += src.size();
     }
@@ -95,18 +95,18 @@ private:
     size_t nPos;
 };
 
-/** Minimal stream for reading from an existing byte array by std::span.
+/** Minimal stream for reading from an existing byte array by Span.
  */
 class SpanReader
 {
 private:
-    std::span<const unsigned char> m_data;
+    Span<const unsigned char> m_data;
 
 public:
     /**
      * @param[in]  data Referenced byte vector to overwrite/append
      */
-    explicit SpanReader(std::span<const unsigned char> data) : m_data{data} {}
+    explicit SpanReader(Span<const unsigned char> data) : m_data{data} {}
 
     template<typename T>
     SpanReader& operator>>(T&& obj)
@@ -118,7 +118,7 @@ public:
     size_t size() const { return m_data.size(); }
     bool empty() const { return m_data.empty(); }
 
-    void read(std::span<std::byte> dst)
+    void read(Span<std::byte> dst)
     {
         if (dst.size() == 0) {
             return;
@@ -162,8 +162,8 @@ public:
     typedef vector_type::reverse_iterator reverse_iterator;
 
     explicit DataStream() = default;
-    explicit DataStream(std::span<const uint8_t> sp) : DataStream{std::as_bytes(sp)} {}
-    explicit DataStream(std::span<const value_type> sp) : vch(sp.data(), sp.data() + sp.size()) {}
+    explicit DataStream(Span<const uint8_t> sp) : DataStream{AsBytes(sp)} {}
+    explicit DataStream(Span<const value_type> sp) : vch(sp.data(), sp.data() + sp.size()) {}
 
     std::string str() const
     {
@@ -215,7 +215,7 @@ public:
     bool eof() const             { return size() == 0; }
     int in_avail() const         { return size(); }
 
-    void read(std::span<value_type> dst)
+    void read(Span<value_type> dst)
     {
         if (dst.size() == 0) return;
 
@@ -248,7 +248,7 @@ public:
         m_read_pos = next_read_pos.value();
     }
 
-    void write(std::span<const value_type> src)
+    void write(Span<const value_type> src)
     {
         // Write to the end of the buffer
         vch.insert(vch.end(), src.begin(), src.end());
@@ -277,9 +277,6 @@ public:
     {
         util::Xor(MakeWritableByteSpan(*this), MakeByteSpan(key));
     }
-
-    /** Compute total memory usage of this object (own memory + any dynamic memory). */
-    size_t GetMemoryUsage() const noexcept;
 };
 
 template <typename IStream>
@@ -431,26 +428,17 @@ public:
     void SetXor(std::vector<std::byte> data_xor) { m_xor = data_xor; }
 
     /** Implementation detail, only used internally. */
-    std::size_t detail_fread(std::span<std::byte> dst);
+    std::size_t detail_fread(Span<std::byte> dst);
 
-    /** Wrapper around fseek(). Will throw if seeking is not possible. */
     void seek(int64_t offset, int origin);
-
-    /** Find position within the file. Will throw if unknown. */
     int64_t tell();
-
-    /** Wrapper around FileCommit(). */
-    bool Commit();
-
-    /** Wrapper around TruncateFile(). */
-    bool Truncate(unsigned size);
 
     //
     // Stream subset
     //
-    void read(std::span<std::byte> dst);
+    void read(Span<std::byte> dst);
     void ignore(size_t nSize);
-    void write(std::span<const std::byte> src);
+    void write(Span<const std::byte> src);
 
     template <typename T>
     AutoFile& operator<<(const T& obj)
@@ -465,6 +453,10 @@ public:
         ::Unserialize(*this, obj);
         return *this;
     }
+
+    bool Commit();
+    bool IsError();
+    bool Truncate(unsigned size);
 };
 
 /** Wrapper around an AutoFile& that implements a ring buffer to
@@ -492,7 +484,7 @@ private:
             readNow = nAvail;
         if (readNow == 0)
             return false;
-        size_t nBytes{m_src.detail_fread(std::span{vchBuf}.subspan(pos, readNow))};
+        size_t nBytes{m_src.detail_fread(Span{vchBuf}.subspan(pos, readNow))};
         if (nBytes == 0) {
             throw std::ios_base::failure{m_src.feof() ? "BufferedFile::Fill: end of file" : "BufferedFile::Fill: fread failed"};
         }
@@ -536,7 +528,7 @@ public:
     }
 
     //! read a number of bytes
-    void read(std::span<std::byte> dst)
+    void read(Span<std::byte> dst)
     {
         while (dst.size() > 0) {
             auto [buffer_pointer, length]{AdvanceStream(dst.size())};

@@ -2,24 +2,14 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or https://www.opensource.org/licenses/mit-license.php.
 
-#include <bench/bench.h>
-#include <random.h>
-#include <support/allocators/secure.h>
-#include <test/util/setup_common.h>
-#include <uint256.h>
-#include <util/fs.h>
-#include <util/translation.h>
-#include <wallet/context.h>
-#include <wallet/db.h>
-#include <wallet/wallet.h>
-#include <wallet/walletutil.h>
+#include <config/bitcoin-config.h> // IWYU pragma: keep
 
-#include <cassert>
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
+#include <bench/bench.h>
+#include <node/context.h>
+#include <random.h>
+#include <test/util/setup_common.h>
+#include <wallet/context.h>
+#include <wallet/wallet.h>
 
 namespace wallet {
 static void WalletCreate(benchmark::Bench& bench, bool encrypted)
@@ -60,7 +50,9 @@ static void WalletCreate(benchmark::Bench& bench, bool encrypted)
 static void WalletCreatePlain(benchmark::Bench& bench) { WalletCreate(bench, /*encrypted=*/false); }
 static void WalletCreateEncrypted(benchmark::Bench& bench) { WalletCreate(bench, /*encrypted=*/true); }
 
+#ifdef USE_SQLITE
 BENCHMARK(WalletCreatePlain, benchmark::PriorityLevel::LOW);
 BENCHMARK(WalletCreateEncrypted, benchmark::PriorityLevel::LOW);
+#endif
 
 } // namespace wallet

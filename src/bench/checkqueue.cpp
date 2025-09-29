@@ -7,11 +7,9 @@
 #include <common/system.h>
 #include <key.h>
 #include <prevector.h>
+#include <pubkey.h>
 #include <random.h>
 
-#include <cstddef>
-#include <cstdint>
-#include <utility>
 #include <vector>
 
 static const size_t BATCHES = 101;
@@ -34,9 +32,9 @@ static void CCheckQueueSpeedPrevectorJob(benchmark::Bench& bench)
         explicit PrevectorJob(FastRandomContext& insecure_rand){
             p.resize(insecure_rand.randrange(PREVECTOR_SIZE*2));
         }
-        std::optional<int> operator()()
+        bool operator()()
         {
-            return std::nullopt;
+            return true;
         }
     };
 
@@ -62,7 +60,7 @@ static void CCheckQueueSpeedPrevectorJob(benchmark::Bench& bench)
         }
         // control waits for completion by RAII, but
         // it is done explicitly here for clarity
-        control.Complete();
+        control.Wait();
     });
 }
 BENCHMARK(CCheckQueueSpeedPrevectorJob, benchmark::PriorityLevel::HIGH);

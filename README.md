@@ -48,13 +48,12 @@ lots of money.
 
 Developers are strongly encouraged to write [unit tests](src/test/README.md) for new code, and to
 submit new unit tests for old code. Unit tests can be compiled and run
-(assuming they weren't disabled during the generation of the build system) with: `ctest`. Further details on running
+(assuming they weren't disabled in configure) with: `make check`. Further details on running
 and extending unit tests can be found in [/src/test/README.md](/src/test/README.md).
 
 There are also [regression and integration tests](/test), written
 in Python.
-These tests can be run (if the [test dependencies](/test) are installed) with: `build/test/functional/test_runner.py`
-(assuming `build` is your build directory).
+These tests can be run (if the [test dependencies](/test) are installed) with: `test/functional/test_runner.py`
 
 The CI (Continuous Integration) systems make sure that every pull request is built for Windows, Linux, and macOS,
 and that unit/sanity tests are run automatically.
@@ -77,54 +76,3 @@ Translations are periodically pulled from Transifex and merged into the git repo
 
 **Important**: We do not accept translation changes as GitHub pull requests because the next
 pull from Transifex would automatically overwrite them again.
-
-# To build the custom bitcoin core 
-
-1. ** Setting Up Your Development Environment **
-
-    ```
-    sudo apt update
-    sudo apt-get install build-essential libtool autotools-dev automake pkg-config bsdmainutils python3 libssl-dev libevent-dev libboost-system-dev libboost-filesystem-dev libboost-chrono-dev libboost-test-dev libboost-thread-dev libminiupnpc-dev libzmq3-dev libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev protobuf-compiler git libsqlite3-dev ccache cmake
-    ```
-2.  **Clone the repository:**
-
-    ```bash
-    git clone https://github.com/Skrybit/bitcoin-core-large-tx
-    cd bitcoin-core-large-tx
-    ```
-
-3.  **Create a build directory:**
-
-    ```bash
-    mkdir build
-    cd build
-    ```
-
-4.  **Configure the build using CMake:**
-
-    ```bash
-    cmake ..
-    ```
-
-5.  **Build the executables:**
-
-    ```bash
-    cmake --build . -j $(nproc)
-    ```
-
-    *Note: The `-j $(nproc)` flag tells `make` to use multiple cores for faster compilation.  Adjust the number of cores if needed.*
-
-6.  **Run the tests:**
-
-    ```bash
-    ctest --test-dir .
-    ```
-
-7.  **Run the `bitcoind` daemon:**
-
-    ```bash
-    ./bin/bitcoind
-    ```
-
-    For testing, consider using testnet or regtest modes (e.g., ./src/bitcoind -testnet).
-

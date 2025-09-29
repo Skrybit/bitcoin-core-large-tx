@@ -20,12 +20,6 @@
 
 namespace {
 const TestingSetup* g_setup;
-
-int32_t GetCheckRatio()
-{
-    return std::clamp<int32_t>(g_setup->m_node.args->GetIntArg("-checkaddrman", 0), 0, 1000000);
-}
-
 } // namespace
 
 void initialize_connman()
@@ -36,25 +30,12 @@ void initialize_connman()
 
 FUZZ_TARGET(connman, .init = initialize_connman)
 {
-    SeedRandomStateForTest(SeedRand::ZEROS);
     FuzzedDataProvider fuzzed_data_provider{buffer.data(), buffer.size()};
     SetMockTime(ConsumeTime(fuzzed_data_provider));
-    auto netgroupman{ConsumeNetGroupManager(fuzzed_data_provider)};
-    auto addr_man_ptr{std::make_unique<AddrManDeterministic>(netgroupman, fuzzed_data_provider, GetCheckRatio())};
-    if (fuzzed_data_provider.ConsumeBool()) {
-        const std::vector<uint8_t> serialized_data{ConsumeRandomLengthByteVector(fuzzed_data_provider)};
-        DataStream ds{serialized_data};
-        try {
-            ds >> *addr_man_ptr;
-        } catch (const std::ios_base::failure&) {
-            addr_man_ptr = std::make_unique<AddrManDeterministic>(netgroupman, fuzzed_data_provider, GetCheckRatio());
-        }
-    }
-    AddrManDeterministic& addr_man{*addr_man_ptr};
     ConnmanTestMsg connman{fuzzed_data_provider.ConsumeIntegral<uint64_t>(),
                      fuzzed_data_provider.ConsumeIntegral<uint64_t>(),
-                     addr_man,
-                     netgroupman,
+                     *g_setup->m_node.addrman,
+                     *g_setup->m_node.netgroupman,
                      Params(),
                      fuzzed_data_provider.ConsumeBool()};
 
@@ -110,15 +91,17 @@ FUZZ_TARGET(connman, .init = initialize_connman)
                 (void)connman.ForNode(fuzzed_data_provider.ConsumeIntegral<NodeId>(), [&](auto) { return fuzzed_data_provider.ConsumeBool(); });
             },
             [&] {
-                auto max_addresses = fuzzed_data_provider.ConsumeIntegral<size_t>();
-                auto max_pct = fuzzed_data_provider.ConsumeIntegralInRange<size_t>(0, 100);
-                auto filtered = fuzzed_data_provider.ConsumeBool();
-                (void)connman.GetAddresses(max_addresses, max_pct, /*network=*/std::nullopt, filtered);
+                (void)connman.GetAddresses(
+                    /*max_addresses=*/fuzzed_data_provider.ConsumeIntegral<size_t>(),
+                    /*max_pct=*/fuzzed_data_provider.ConsumeIntegral<size_t>(),
+                    /*network=*/std::nullopt,
+                    /*filtered=*/fuzzed_data_provider.ConsumeBool());
             },
             [&] {
-                auto max_addresses = fuzzed_data_provider.ConsumeIntegral<size_t>();
-                auto max_pct = fuzzed_data_provider.ConsumeIntegralInRange<size_t>(0, 100);
-                (void)connman.GetAddresses(/*requestor=*/random_node, max_addresses, max_pct);
+                (void)connman.GetAddresses(
+                    /*requestor=*/random_node,
+                    /*max_addresses=*/fuzzed_data_provider.ConsumeIntegral<size_t>(),
+                    /*max_pct=*/fuzzed_data_provider.ConsumeIntegral<size_t>());
             },
             [&] {
                 (void)connman.GetDeterministicRandomizer(fuzzed_data_provider.ConsumeIntegral<uint64_t>());
@@ -131,7 +114,7 @@ FUZZ_TARGET(connman, .init = initialize_connman)
             },
             [&] {
                 CSerializedNetMsg serialized_net_msg;
-                serialized_net_msg.m_type = fuzzed_data_provider.ConsumeRandomLengthString(CMessageHeader::MESSAGE_TYPE_SIZE);
+                serialized_net_msg.m_type = fuzzed_data_provider.ConsumeRandomLengthString(CMessageHeader::COMMAND_SIZE);
                 serialized_net_msg.data = ConsumeRandomLengthByteVector(fuzzed_data_provider);
                 connman.PushMessage(&random_node, std::move(serialized_net_msg));
             },
@@ -159,7 +142,6 @@ FUZZ_TARGET(connman, .init = initialize_connman)
     (void)connman.GetTotalBytesSent();
     (void)connman.GetTryNewOutboundPeer();
     (void)connman.GetUseAddrmanOutgoing();
-    (void)connman.ASMapHealthCheck();
 
     connman.ClearTestNodes();
 }

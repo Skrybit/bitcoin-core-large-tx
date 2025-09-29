@@ -64,13 +64,13 @@ struct FeeFrac
     int32_t size;
 
     /** Construct an IsEmpty() FeeFrac. */
-    constexpr inline FeeFrac() noexcept : fee{0}, size{0} {}
+    inline FeeFrac() noexcept : fee{0}, size{0} {}
 
     /** Construct a FeeFrac with specified fee and size. */
-    constexpr inline FeeFrac(int64_t f, int32_t s) noexcept : fee{f}, size{s} {}
+    inline FeeFrac(int64_t f, int32_t s) noexcept : fee{f}, size{s} {}
 
-    constexpr inline FeeFrac(const FeeFrac&) noexcept = default;
-    constexpr inline FeeFrac& operator=(const FeeFrac&) noexcept = default;
+    inline FeeFrac(const FeeFrac&) noexcept = default;
+    inline FeeFrac& operator=(const FeeFrac&) noexcept = default;
 
     /** Check if this is empty (size and fee are 0). */
     bool inline IsEmpty() const noexcept {
@@ -154,6 +154,6 @@ struct FeeFrac
  * The caller must guarantee that the sum of the FeeFracs in either of the chunks' data set do not
  * overflow (so sum fees < 2^63, and sum sizes < 2^31).
  */
-std::partial_ordering CompareChunks(std::span<const FeeFrac> chunks0, std::span<const FeeFrac> chunks1);
+std::partial_ordering CompareChunks(Span<const FeeFrac> chunks0, Span<const FeeFrac> chunks1);
 
 #endif // BITCOIN_UTIL_FEEFRAC_H

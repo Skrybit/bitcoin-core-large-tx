@@ -5,7 +5,7 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test framework for bitcoin utils.
 
-Runs automatically during `ctest --test-dir build/`.
+Runs automatically during `make check`.
 
 Can also be run manually."""
 
@@ -73,7 +73,7 @@ def bctest(testDir, testObj, buildenv):
     are not as expected. Error is caught by bctester() and reported.
     """
     # Get the exec names and arguments
-    execprog = os.path.join(buildenv["BUILDDIR"], "bin", testObj["exec"] + buildenv["EXEEXT"])
+    execprog = os.path.join(buildenv["BUILDDIR"], "src", testObj["exec"] + buildenv["EXEEXT"])
     if testObj["exec"] == "./bitcoin-util":
         execprog = os.getenv("BITCOINUTIL", default=execprog)
     elif testObj["exec"] == "./bitcoin-tx":
@@ -83,11 +83,13 @@ def bctest(testDir, testObj, buildenv):
     execrun = [execprog] + execargs
 
     # Read the input data (if there is any)
+    stdinCfg = None
     inputData = None
     if "input" in testObj:
         filename = os.path.join(testDir, testObj["input"])
         with open(filename, encoding="utf8") as f:
             inputData = f.read()
+        stdinCfg = subprocess.PIPE
 
     # Read the expected output data (if there is any)
     outputFn = None
@@ -110,8 +112,9 @@ def bctest(testDir, testObj, buildenv):
             raise Exception
 
     # Run the test
+    proc = subprocess.Popen(execrun, stdin=stdinCfg, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
-        res = subprocess.run(execrun, capture_output=True, text=True, input=inputData)
+        outs = proc.communicate(input=inputData)
     except OSError:
         logging.error("OSError, Failed to execute " + execprog)
         raise
@@ -120,9 +123,9 @@ def bctest(testDir, testObj, buildenv):
         data_mismatch, formatting_mismatch = False, False
         # Parse command output and expected output
         try:
-            a_parsed = parse_output(res.stdout, outputType)
+            a_parsed = parse_output(outs[0], outputType)
         except Exception as e:
-            logging.error(f"Error parsing command output as {outputType}: '{str(e)}'; res: {str(res)}")
+            logging.error('Error parsing command output as %s: %s' % (outputType, e))
             raise
         try:
             b_parsed = parse_output(outputData, outputType)
@@ -131,13 +134,13 @@ def bctest(testDir, testObj, buildenv):
             raise
         # Compare data
         if a_parsed != b_parsed:
-            logging.error(f"Output data mismatch for {outputFn} (format {outputType}); res: {str(res)}")
+            logging.error("Output data mismatch for " + outputFn + " (format " + outputType + ")")
             data_mismatch = True
         # Compare formatting
-        if res.stdout != outputData:
-            error_message = f"Output formatting mismatch for {outputFn}:\nres: {str(res)}\n"
+        if outs[0] != outputData:
+            error_message = "Output formatting mismatch for " + outputFn + ":\n"
             error_message += "".join(difflib.context_diff(outputData.splitlines(True),
-                                                          res.stdout.splitlines(True),
+                                                          outs[0].splitlines(True),
                                                           fromfile=outputFn,
                                                           tofile="returned"))
             logging.error(error_message)
@@ -149,8 +152,8 @@ def bctest(testDir, testObj, buildenv):
     wantRC = 0
     if "return_code" in testObj:
         wantRC = testObj['return_code']
-    if res.returncode != wantRC:
-        logging.error(f"Return code mismatch for {outputFn}; res: {str(res)}")
+    if proc.returncode != wantRC:
+        logging.error("Return code mismatch for " + outputFn)
         raise Exception
 
     if "error_txt" in testObj:
@@ -161,8 +164,8 @@ def bctest(testDir, testObj, buildenv):
         # emits DISPLAY errors when running as a windows application on
         # linux through wine. Just assert that the expected error text appears
         # somewhere in stderr.
-        if want_error not in res.stderr:
-            logging.error(f"Error mismatch:\nExpected: {want_error}\nReceived: {res.stderr.rstrip()}\nres: {str(res)}")
+        if want_error not in outs[1]:
+            logging.error("Error mismatch:\n" + "Expected: " + want_error + "\nReceived: " + outs[1].rstrip())
             raise Exception
 
 def parse_output(a, fmt):

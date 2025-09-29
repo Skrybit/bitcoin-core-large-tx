@@ -18,7 +18,6 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-#include <test/util/random.h>
 #include <util/chaintype.h>
 #include <util/strencodings.h>
 
@@ -39,7 +38,6 @@ void initialize_key()
 
 FUZZ_TARGET(key, .init = initialize_key)
 {
-    SeedRandomStateForTest(SeedRand::ZEROS);
     const CKey key = [&] {
         CKey k;
         k.Set(buffer.begin(), buffer.end(), true);

@@ -86,9 +86,6 @@ static const char* const COOKIEAUTH_FILE = ".cookie";
 static fs::path GetAuthCookieFile(bool temp=false)
 {
     fs::path arg = gArgs.GetPathArg("-rpccookiefile", COOKIEAUTH_FILE);
-    if (arg.empty()) {
-        return {}; // -norpccookiefile was specified
-    }
     if (temp) {
         arg += ".tmp";
     }
@@ -109,12 +106,9 @@ bool GenerateAuthCookie(std::string* cookie_out, std::optional<fs::perms> cookie
      */
     std::ofstream file;
     fs::path filepath_tmp = GetAuthCookieFile(true);
-    if (filepath_tmp.empty()) {
-        return true; // -norpccookiefile
-    }
     file.open(filepath_tmp);
     if (!file.is_open()) {
-        LogWarning("Unable to open cookie authentication file %s for writing", fs::PathToString(filepath_tmp));
+        LogInfo("Unable to open cookie authentication file %s for writing\n", fs::PathToString(filepath_tmp));
         return false;
     }
     file << cookie;
@@ -122,14 +116,14 @@ bool GenerateAuthCookie(std::string* cookie_out, std::optional<fs::perms> cookie
 
     fs::path filepath = GetAuthCookieFile(false);
     if (!RenameOver(filepath_tmp, filepath)) {
-        LogWarning("Unable to rename cookie authentication file %s to %s", fs::PathToString(filepath_tmp), fs::PathToString(filepath));
+        LogInfo("Unable to rename cookie authentication file %s to %s\n", fs::PathToString(filepath_tmp), fs::PathToString(filepath));
         return false;
     }
     if (cookie_perms) {
         std::error_code code;
         fs::permissions(filepath, cookie_perms.value(), fs::perm_options::replace, code);
         if (code) {
-            LogWarning("Unable to set permissions on cookie authentication file %s", fs::PathToString(filepath));
+            LogInfo("Unable to set permissions on cookie authentication file %s\n", fs::PathToString(filepath_tmp));
             return false;
         }
     }
@@ -148,9 +142,6 @@ bool GetAuthCookie(std::string *cookie_out)
     std::ifstream file;
     std::string cookie;
     fs::path filepath = GetAuthCookieFile();
-    if (filepath.empty()) {
-        return true; // -norpccookiefile
-    }
     file.open(filepath);
     if (!file.is_open())
         return false;
@@ -235,10 +226,10 @@ void JSONRPCRequest::parse(const UniValue& valRequest)
         throw JSONRPCError(RPC_INVALID_REQUEST, "Method must be a string");
     strMethod = valMethod.get_str();
     if (fLogIPs)
-        LogDebug(BCLog::RPC, "ThreadRPCServer method=%s user=%s peeraddr=%s\n", SanitizeString(strMethod),
+        LogPrint(BCLog::RPC, "ThreadRPCServer method=%s user=%s peeraddr=%s\n", SanitizeString(strMethod),
             this->authUser, this->peerAddr);
     else
-        LogDebug(BCLog::RPC, "ThreadRPCServer method=%s user=%s\n", SanitizeString(strMethod), this->authUser);
+        LogPrint(BCLog::RPC, "ThreadRPCServer method=%s user=%s\n", SanitizeString(strMethod), this->authUser);
 
     // Parse params
     const UniValue& valParams{request.find_value("params")};

@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <config/bitcoin-config.h> // IWYU pragma: keep
 
 #include <qt/optionsmodel.h>
 
@@ -15,8 +15,8 @@
 #include <mapport.h>
 #include <net.h>
 #include <netbase.h>
-#include <node/caches.h>
 #include <node/chainstatemanager_args.h>
+#include <txdb.h> // for -dbcache defaults
 #include <util/string.h>
 #include <validation.h>    // For DEFAULT_SCRIPTCHECK_THREADS
 #include <wallet/wallet.h> // For DEFAULT_SPEND_ZEROCONF_CHANGE
@@ -41,6 +41,7 @@ static const char* SettingName(OptionsModel::OptionID option)
     case OptionsModel::ThreadsScriptVerif: return "par";
     case OptionsModel::SpendZeroConfChange: return "spendzeroconfchange";
     case OptionsModel::ExternalSignerPath: return "signer";
+    case OptionsModel::MapPortUPnP: return "upnp";
     case OptionsModel::MapPortNatpmp: return "natpmp";
     case OptionsModel::Listen: return "listen";
     case OptionsModel::Server: return "server";
@@ -214,7 +215,7 @@ bool OptionsModel::Init(bilingual_str& error)
 
     // These are shared with the core or have a command-line parameter
     // and we want command-line parameters to overwrite the GUI settings.
-    for (OptionID option : {DatabaseCache, ThreadsScriptVerif, SpendZeroConfChange, ExternalSignerPath,
+    for (OptionID option : {DatabaseCache, ThreadsScriptVerif, SpendZeroConfChange, ExternalSignerPath, MapPortUPnP,
                             MapPortNatpmp, Listen, Server, Prune, ProxyUse, ProxyUseTor, Language}) {
         std::string setting = SettingName(option);
         if (node().isSettingIgnored(setting)) addOverriddenOption("-" + setting);
@@ -319,15 +320,10 @@ static ProxySetting ParseProxyString(const QString& proxy)
     if (proxy.isEmpty()) {
         return default_val;
     }
-    uint16_t port{0};
-    std::string hostname;
-    if (SplitHostPort(proxy.toStdString(), port, hostname) && port != 0) {
-        // Valid and port within the valid range
-        // Check if the hostname contains a colon, indicating an IPv6 address
-        if (hostname.find(':') != std::string::npos) {
-            hostname = "[" + hostname + "]"; // Wrap IPv6 address in brackets
-        }
-        return {true, QString::fromStdString(hostname), QString::number(port)};
+    // contains IP at index 0 and port at index 1
+    QStringList ip_port = GUIUtil::SplitSkipEmptyParts(proxy, ":");
+    if (ip_port.size() == 2) {
+        return {true, ip_port.at(0), ip_port.at(1)};
     } else { // Invalid: return default
         return default_val;
     }
@@ -411,8 +407,18 @@ QVariant OptionsModel::getOption(OptionID option, const std::string& suffix) con
         return m_show_tray_icon;
     case MinimizeToTray:
         return fMinimizeToTray;
+    case MapPortUPnP:
+#ifdef USE_UPNP
+        return SettingToBool(setting(), DEFAULT_UPNP);
+#else
+        return false;
+#endif // USE_UPNP
     case MapPortNatpmp:
+#ifdef USE_NATPMP
         return SettingToBool(setting(), DEFAULT_NATPMP);
+#else
+        return false;
+#endif // USE_NATPMP
     case MinimizeOnClose:
         return fMinimizeOnClose;
 
@@ -470,7 +476,7 @@ QVariant OptionsModel::getOption(OptionID option, const std::string& suffix) con
                suffix.empty()          ? getOption(option, "-prev") :
                                          DEFAULT_PRUNE_TARGET_GB;
     case DatabaseCache:
-        return qlonglong(SettingToInt(setting(), DEFAULT_DB_CACHE >> 20));
+        return qlonglong(SettingToInt(setting(), nDefaultDbCache));
     case ThreadsScriptVerif:
         return qlonglong(SettingToInt(setting(), DEFAULT_SCRIPTCHECK_THREADS));
     case Listen:
@@ -523,10 +529,16 @@ bool OptionsModel::setOption(OptionID option, const QVariant& value, const std::
         fMinimizeToTray = value.toBool();
         settings.setValue("fMinimizeToTray", fMinimizeToTray);
         break;
+    case MapPortUPnP: // core option - can be changed on-the-fly
+        if (changed()) {
+            update(value.toBool());
+            node().mapPort(value.toBool(), getOption(MapPortNatpmp).toBool());
+        }
+        break;
     case MapPortNatpmp: // core option - can be changed on-the-fly
         if (changed()) {
             update(value.toBool());
-            node().mapPort(value.toBool());
+            node().mapPort(getOption(MapPortUPnP).toBool(), value.toBool());
         }
         break;
     case MinimizeOnClose:
@@ -733,7 +745,7 @@ void OptionsModel::checkAndMigrate()
         // see https://github.com/bitcoin/bitcoin/pull/8273
         // force people to upgrade to the new value if they are using 100MB
         if (settingsVersion < 130000 && settings.contains("nDatabaseCache") && settings.value("nDatabaseCache").toLongLong() == 100)
-            settings.setValue("nDatabaseCache", (qint64)(DEFAULT_DB_CACHE >> 20));
+            settings.setValue("nDatabaseCache", (qint64)nDefaultDbCache);
 
         settings.setValue(strSettingsVersionKey, CLIENT_VERSION);
     }
@@ -776,6 +788,7 @@ void OptionsModel::checkAndMigrate()
     migrate_setting(SpendZeroConfChange, "bSpendZeroConfChange");
     migrate_setting(ExternalSignerPath, "external_signer_path");
 #endif
+    migrate_setting(MapPortUPnP, "fUseUPnP");
     migrate_setting(MapPortNatpmp, "fUseNatpmp");
     migrate_setting(Listen, "fListen");
     migrate_setting(Server, "server");
@@ -789,7 +802,7 @@ void OptionsModel::checkAndMigrate()
 
     // In case migrating QSettings caused any settings value to change, rerun
     // parameter interaction code to update other settings. This is particularly
-    // important for the -listen setting, which should cause -listenonion
+    // important for the -listen setting, which should cause -listenonion, -upnp,
     // and other settings to default to false if it was set to false.
     // (https://github.com/bitcoin-core/gui/issues/567).
     node().initParameterInteraction();

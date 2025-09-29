@@ -11,13 +11,10 @@
 #include <crypto/sha3.h>
 #include <crypto/sha512.h>
 #include <crypto/siphash.h>
+#include <hash.h>
 #include <random.h>
-#include <span.h>
 #include <tinyformat.h>
 #include <uint256.h>
-
-#include <cstdint>
-#include <vector>
 
 /* Number of bytes to hash per iteration */
 static const uint64_t BUFFER_SIZE = 1000*1000;
@@ -192,16 +189,10 @@ static void SHA512(benchmark::Bench& bench)
 
 static void SipHash_32b(benchmark::Bench& bench)
 {
-    FastRandomContext rng{/*fDeterministic=*/true};
-    auto k0{rng.rand64()}, k1{rng.rand64()};
-    auto val{rng.rand256()};
-    auto i{0U};
+    uint256 x;
+    uint64_t k1 = 0;
     bench.run([&] {
-        ankerl::nanobench::doNotOptimizeAway(SipHashUint256(k0, k1, val));
-        ++k0;
-        ++k1;
-        ++i;
-        val.data()[i % uint256::size()] ^= i & 0xFF;
+        *((uint64_t*)x.begin()) = SipHashUint256(0, ++k1, x);
     });
 }
 
@@ -249,19 +240,6 @@ static void MuHashPrecompute(benchmark::Bench& bench)
     });
 }
 
-static void MuHashFinalize(benchmark::Bench& bench)
-{
-    FastRandomContext rng(true);
-    MuHash3072 acc{rng.randbytes(32)};
-    acc /= MuHash3072{rng.rand256()};
-
-    bench.run([&] {
-        uint256 out;
-        acc.Finalize(out);
-        acc /= MuHash3072{out};
-    });
-}
-
 BENCHMARK(BenchRIPEMD160, benchmark::PriorityLevel::HIGH);
 BENCHMARK(SHA1, benchmark::PriorityLevel::HIGH);
 BENCHMARK(SHA256_STANDARD, benchmark::PriorityLevel::HIGH);
@@ -285,4 +263,3 @@ BENCHMARK(MuHash, benchmark::PriorityLevel::HIGH);
 BENCHMARK(MuHashMul, benchmark::PriorityLevel::HIGH);
 BENCHMARK(MuHashDiv, benchmark::PriorityLevel::HIGH);
 BENCHMARK(MuHashPrecompute, benchmark::PriorityLevel::HIGH);
-BENCHMARK(MuHashFinalize, benchmark::PriorityLevel::HIGH);

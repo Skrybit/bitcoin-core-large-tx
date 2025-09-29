@@ -24,7 +24,6 @@
 #include <util/check.h>
 #include <util/fs.h>
 #include <util/result.h>
-#include <util/time.h>
 #include <validation.h>
 
 #include <cstdint>
@@ -59,7 +58,7 @@ void initialize_chain()
         auto& chainman{*setup->m_node.chainman};
         for (const auto& block : chain) {
             BlockValidationState dummy;
-            bool processed{chainman.ProcessNewBlockHeaders({{block->GetBlockHeader()}}, true, dummy)};
+            bool processed{chainman.ProcessNewBlockHeaders({*block}, true, dummy)};
             Assert(processed);
             const auto* index{WITH_LOCK(::cs_main, return chainman.m_blockman.LookupBlockIndex(block->GetHash()))};
             Assert(index);
@@ -71,9 +70,7 @@ void initialize_chain()
 template <bool INVALID>
 void utxo_snapshot_fuzz(FuzzBufferType buffer)
 {
-    SeedRandomStateForTest(SeedRand::ZEROS);
     FuzzedDataProvider fuzzed_data_provider(buffer.data(), buffer.size());
-    SetMockTime(ConsumeTime(fuzzed_data_provider, /*min=*/1296688602)); // regtest genesis block timestamp
     auto& setup{*g_setup};
     bool dirty_chainman{false}; // Re-use the global chainman, but reset it when it is dirty
     auto& chainman{*setup.m_node.chainman};
@@ -87,7 +84,7 @@ void utxo_snapshot_fuzz(FuzzBufferType buffer)
         // Metadata
         if (fuzzed_data_provider.ConsumeBool()) {
             std::vector<uint8_t> metadata{ConsumeRandomLengthByteVector(fuzzed_data_provider)};
-            outfile << std::span{metadata};
+            outfile << Span{metadata};
         } else {
             auto msg_start = chainman.GetParams().MessageStart();
             int base_blockheight{fuzzed_data_provider.ConsumeIntegralInRange<int>(1, 2 * COINBASE_MATURITY)};
@@ -99,7 +96,7 @@ void utxo_snapshot_fuzz(FuzzBufferType buffer)
         // Coins
         if (fuzzed_data_provider.ConsumeBool()) {
             std::vector<uint8_t> file_data{ConsumeRandomLengthByteVector(fuzzed_data_provider)};
-            outfile << std::span{file_data};
+            outfile << Span{file_data};
         } else {
             int height{0};
             for (const auto& block : *g_chain) {
@@ -140,7 +137,7 @@ void utxo_snapshot_fuzz(FuzzBufferType buffer)
         if constexpr (!INVALID) {
             for (const auto& block : *g_chain) {
                 BlockValidationState dummy;
-                bool processed{chainman.ProcessNewBlockHeaders({{block->GetBlockHeader()}}, true, dummy)};
+                bool processed{chainman.ProcessNewBlockHeaders({*block}, true, dummy)};
                 Assert(processed);
                 const auto* index{WITH_LOCK(::cs_main, return chainman.m_blockman.LookupBlockIndex(block->GetHash()))};
                 Assert(index);

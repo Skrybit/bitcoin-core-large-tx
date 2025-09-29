@@ -2,12 +2,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <base58.h>
 #include <bench/bench.h>
-#include <span.h>
+
+#include <base58.h>
 
 #include <array>
-#include <cstring>
 #include <vector>
 
 

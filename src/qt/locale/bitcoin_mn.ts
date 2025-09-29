@@ -2,10 +2,6 @@
 <context>
     <name>AddressBookPage</name>
     <message>
-        <source>Right-click to edit address or label</source>
-        <translation type="unfinished">Хаяг эсвэл шошгыг засаxд баруун товчийг дарна</translation>
-    </message>
-    <message>
         <source>Create a new address</source>
         <translation type="unfinished">Шинэ хаяг нээх</translation>
     </message>
@@ -76,15 +72,6 @@
     <message>
         <source>Export Address List</source>
         <translation type="unfinished">Экспорт хийх хаягуудын жагсаалт</translation>
-    </message>
-    <message>
-        <source>Comma separated file</source>
-        <extracomment>Expanded name of the CSV file format. See: https://en.wikipedia.org/wiki/Comma-separated_values.</extracomment>
-        <translation type="unfinished">таслалаар тусгаарлагдсан файлууд</translation>
-    </message>
-    <message>
-        <source>Sending addresses - %1</source>
-        <translation type="unfinished">хаягуудииг Илгээж байна - %1</translation>
     </message>
     <message>
         <source>Exporting Failed</source>
@@ -557,10 +544,6 @@
     </context>
 <context>
     <name>OpenURIDialog</name>
-    <message>
-        <source>URI:</source>
-        <translation type="unfinished">Гипер холбоос</translation>
-    </message>
     <message>
         <source>Paste address from clipboard</source>
         <extracomment>Tooltip text for button that allows you to paste an address that is in your clipboard.</extracomment>
@@ -1042,11 +1025,6 @@
     <message>
         <source>Min amount</source>
         <translation type="unfinished">Хамгийн бага хэмжээ</translation>
-    </message>
-    <message>
-        <source>Comma separated file</source>
-        <extracomment>Expanded name of the CSV file format. See: https://en.wikipedia.org/wiki/Comma-separated_values.</extracomment>
-        <translation type="unfinished">таслалаар тусгаарлагдсан файлууд</translation>
     </message>
     <message>
         <source>Confirmed</source>

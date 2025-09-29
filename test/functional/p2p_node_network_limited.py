@@ -14,6 +14,8 @@ from test_framework.messages import (
     NODE_NETWORK_LIMITED,
     NODE_P2P_V2,
     NODE_WITNESS,
+    NODE_FULL_RBF,
+    NODE_LIBRE,
     msg_getdata,
 )
 from test_framework.p2p import P2PInterface
@@ -40,7 +42,7 @@ class P2PIgnoreInv(P2PInterface):
     def send_getdata_for_block(self, blockhash):
         getdata_request = msg_getdata()
         getdata_request.inv.append(CInv(MSG_BLOCK, int(blockhash, 16)))
-        self.send_without_ping(getdata_request)
+        self.send_message(getdata_request)
 
 class NodeNetworkLimitedTest(BitcoinTestFramework):
     def set_test_params(self):
@@ -102,10 +104,10 @@ class NodeNetworkLimitedTest(BitcoinTestFramework):
         tip_height = pruned_node.getblockcount()
         limit_buffer = 2
         # Prevent races by waiting for the tip to arrive first
-        self.wait_until(lambda: not try_rpc(-1, "Block not available (not fully downloaded)", full_node.getblock, pruned_node.getbestblockhash()))
+        self.wait_until(lambda: not try_rpc(-1, "Block not found", full_node.getblock, pruned_node.getbestblockhash()))
         for height in range(start_height_full_node + 1, tip_height + 1):
             if height <= tip_height - (NODE_NETWORK_LIMITED_MIN_BLOCKS - limit_buffer):
-                assert_raises_rpc_error(-1, "Block not available (not fully downloaded)", full_node.getblock, pruned_node.getblockhash(height))
+                assert_raises_rpc_error(-1, "Block not found on disk", full_node.getblock, pruned_node.getblockhash(height))
             else:
                 full_node.getblock(pruned_node.getblockhash(height))  # just assert it does not throw an exception
 
@@ -118,7 +120,7 @@ class NodeNetworkLimitedTest(BitcoinTestFramework):
     def run_test(self):
         node = self.nodes[0].add_p2p_connection(P2PIgnoreInv())
 
-        expected_services = NODE_WITNESS | NODE_NETWORK_LIMITED
+        expected_services = NODE_WITNESS | NODE_NETWORK_LIMITED | NODE_FULL_RBF | NODE_LIBRE
         if self.options.v2transport:
             expected_services |= NODE_P2P_V2
 

@@ -41,9 +41,7 @@ FUZZ_TARGET(cuckoocache)
         if (fuzzed_data_provider.ConsumeBool()) {
             cuckoo_cache.insert(fuzzed_data_provider.ConsumeBool());
         } else {
-            auto e = fuzzed_data_provider.ConsumeBool();
-            auto erase = fuzzed_data_provider.ConsumeBool();
-            cuckoo_cache.contains(e, erase);
+            cuckoo_cache.contains(fuzzed_data_provider.ConsumeBool(), fuzzed_data_provider.ConsumeBool());
         }
     }
     fuzzed_data_provider_ptr = nullptr;

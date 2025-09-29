@@ -3,20 +3,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-#include <consensus/amount.h>
-#include <kernel/cs_main.h>
+#include <kernel/mempool_entry.h>
 #include <policy/policy.h>
-#include <primitives/transaction.h>
-#include <script/script.h>
-#include <sync.h>
 #include <test/util/setup_common.h>
-#include <test/util/txmempool.h>
 #include <txmempool.h>
-#include <util/check.h>
-
-#include <cstdint>
-#include <memory>
-#include <vector>
 
 
 static void AddTx(const CTransactionRef& tx, const CAmount& nFee, CTxMemPool& pool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, pool.cs)
@@ -27,7 +17,7 @@ static void AddTx(const CTransactionRef& tx, const CAmount& nFee, CTxMemPool& po
     bool spendsCoinbase = false;
     unsigned int sigOpCost = 4;
     LockPoints lp;
-    AddToMempool(pool, CTxMemPoolEntry(
+    pool.addUnchecked(CTxMemPoolEntry(
         tx, nFee, nTime, nHeight, sequence,
         spendsCoinbase, sigOpCost, lp));
 }

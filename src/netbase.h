@@ -37,12 +37,12 @@ enum class ConnectionDirection {
     Both = (In | Out),
 };
 static inline ConnectionDirection& operator|=(ConnectionDirection& a, ConnectionDirection b) {
-    using underlying = std::underlying_type_t<ConnectionDirection>;
+    using underlying = typename std::underlying_type<ConnectionDirection>::type;
     a = ConnectionDirection(underlying(a) | underlying(b));
     return a;
 }
 static inline bool operator&(ConnectionDirection a, ConnectionDirection b) {
-    using underlying = std::underlying_type_t<ConnectionDirection>;
+    using underlying = typename std::underlying_type<ConnectionDirection>::type;
     return (underlying(a) & underlying(b));
 }
 
@@ -132,13 +132,6 @@ public:
     {
         AssertLockNotHeld(m_mutex);
         return Contains(addr.GetNetwork());
-    }
-
-    [[nodiscard]] std::unordered_set<Network> All() const EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
-    {
-        AssertLockNotHeld(m_mutex);
-        LOCK(m_mutex);
-        return m_reachable;
     }
 
 private:

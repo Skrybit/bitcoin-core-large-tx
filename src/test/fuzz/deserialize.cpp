@@ -263,7 +263,7 @@ FUZZ_TARGET(service_deserialize, .init = initialize_deserialize)
 FUZZ_TARGET_DESERIALIZE(messageheader_deserialize, {
     CMessageHeader mh;
     DeserializeFromFuzzingInput(buffer, mh);
-    (void)mh.IsMessageTypeValid();
+    (void)mh.IsCommandValid();
 })
 FUZZ_TARGET(address_deserialize, .init = initialize_deserialize)
 {

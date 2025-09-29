@@ -5,12 +5,10 @@
 """Test signet miner tool"""
 
 import os.path
-import shlex
 import subprocess
 import sys
 import time
 
-from test_framework.blocktools import DIFF_1_N_BITS
 from test_framework.key import ECKey
 from test_framework.script_util import key_to_p2wpkh_script
 from test_framework.test_framework import BitcoinTestFramework
@@ -50,18 +48,15 @@ class SignetMinerTest(BitcoinTestFramework):
         # generate block with signet miner tool
         base_dir = self.config["environment"]["SRCDIR"]
         signet_miner_path = os.path.join(base_dir, "contrib", "signet", "miner")
-        rpc_argv = node.binaries.rpc_argv() + [f"-datadir={node.cli.datadir}"]
-        util_argv = node.binaries.util_argv() + ["grind"]
         subprocess.run([
                 sys.executable,
                 signet_miner_path,
-                f'--cli={shlex.join(rpc_argv)}',
+                f'--cli={node.cli.binary} -datadir={node.cli.datadir}',
                 'generate',
                 f'--address={node.getnewaddress()}',
-                f'--grind-cmd={shlex.join(util_argv)}',
-                f'--nbits={DIFF_1_N_BITS:08x}',
+                f'--grind-cmd={self.options.bitcoinutil} grind',
+                '--nbits=1d00ffff',
                 f'--set-block-time={int(time.time())}',
-                '--poolnum=99',
             ], check=True, stderr=subprocess.STDOUT)
         assert_equal(node.getblockcount(), 1)
 

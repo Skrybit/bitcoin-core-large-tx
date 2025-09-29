@@ -1,4 +1,4 @@
-// Copyright (c) 2020-present The Bitcoin Core developers
+// Copyright (c) 2020-2021 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -28,10 +28,11 @@ FUZZ_TARGET(crypto_chacha20)
                 chacha20.SetKey(key);
             },
             [&] {
-                ChaCha20::Nonce96 nonce{
-                    fuzzed_data_provider.ConsumeIntegral<uint32_t>(),
-                    fuzzed_data_provider.ConsumeIntegral<uint64_t>()};
-                chacha20.Seek(nonce, fuzzed_data_provider.ConsumeIntegral<uint32_t>());
+                chacha20.Seek(
+                    {
+                        fuzzed_data_provider.ConsumeIntegral<uint32_t>(),
+                        fuzzed_data_provider.ConsumeIntegral<uint64_t>()
+                    }, fuzzed_data_provider.ConsumeIntegral<uint32_t>());
             },
             [&] {
                 std::vector<uint8_t> output(fuzzed_data_provider.ConsumeIntegralInRange<size_t>(0, 4096));
@@ -108,9 +109,9 @@ void ChaCha20SplitFuzz(FuzzedDataProvider& provider)
         // This tests that Keystream() has the same behavior as Crypt() applied
         // to 0x00 input bytes.
         if (UseCrypt || provider.ConsumeBool()) {
-            crypt2.Crypt(std::span{data2}.subspan(bytes2, now), std::span{data2}.subspan(bytes2, now));
+            crypt2.Crypt(Span{data2}.subspan(bytes2, now), Span{data2}.subspan(bytes2, now));
         } else {
-            crypt2.Keystream(std::span{data2}.subspan(bytes2, now));
+            crypt2.Keystream(Span{data2}.subspan(bytes2, now));
         }
         bytes2 += now;
         if (is_last) break;

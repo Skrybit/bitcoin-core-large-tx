@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <bitcoin-build-config.h> // IWYU pragma: keep
+#include <config/bitcoin-config.h> // IWYU pragma: keep
 
 #include <clientversion.h>
 #include <common/args.h>
@@ -17,7 +17,6 @@
 #include <util/translation.h>
 
 #include <algorithm>
-#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -58,6 +57,7 @@ void SetLoggingOptions(const ArgsManager& args)
 
 util::Result<void> SetLoggingLevel(const ArgsManager& args)
 {
+    if (args.IsArgSet("-loglevel")) {
         for (const std::string& level_str : args.GetArgs("-loglevel")) {
             if (level_str.find_first_of(':', 3) == std::string::npos) {
                 // user passed a global log level, i.e. -loglevel=<level>
@@ -72,24 +72,25 @@ util::Result<void> SetLoggingLevel(const ArgsManager& args)
                 }
             }
         }
+    }
     return {};
 }
 
 util::Result<void> SetLoggingCategories(const ArgsManager& args)
 {
+    if (args.IsArgSet("-debug")) {
+        // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
         const std::vector<std::string> categories = args.GetArgs("-debug");
 
-        // Special-case: Disregard any debugging categories appearing before -debug=0/none
-        const auto last_negated = std::find_if(categories.rbegin(), categories.rend(),
-                                               [](const std::string& cat) { return cat == "0" || cat == "none"; });
-
-        const auto categories_to_process = (last_negated == categories.rend()) ? categories : std::ranges::subrange(last_negated.base(), categories.end());
-
-        for (const auto& cat : categories_to_process) {
-            if (!LogInstance().EnableCategory(cat)) {
-                return util::Error{strprintf(_("Unsupported logging category %s=%s."), "-debug", cat)};
+        if (std::none_of(categories.begin(), categories.end(),
+            [](std::string cat){return cat == "0" || cat == "none";})) {
+            for (const auto& cat : categories) {
+                if (!LogInstance().EnableCategory(cat)) {
+                    return util::Error{strprintf(_("Unsupported logging category %s=%s."), "-debug", cat)};
+                }
             }
         }
+    }
 
     // Now remove the logging categories which were explicitly excluded
     for (const std::string& cat : args.GetArgs("-debugexclude")) {
@@ -110,8 +111,8 @@ bool StartLogging(const ArgsManager& args)
         }
     }
     if (!LogInstance().StartLogging()) {
-            return InitError(Untranslated(strprintf("Could not open debug log file %s",
-                fs::PathToString(LogInstance().m_file_path))));
+            return InitError(strprintf(Untranslated("Could not open debug log file %s"),
+                fs::PathToString(LogInstance().m_file_path)));
     }
 
     if (!LogInstance().m_log_timestamps)
@@ -121,13 +122,10 @@ bool StartLogging(const ArgsManager& args)
 
     // Only log conf file usage message if conf file actually exists.
     fs::path config_file_path = args.GetConfigFilePath();
-    if (args.IsArgNegated("-conf")) {
-        LogInfo("Config file: <disabled>");
-    } else if (fs::is_directory(config_file_path)) {
-        LogWarning("Config file: %s (is directory, not file)", fs::PathToString(config_file_path));
-    } else if (fs::exists(config_file_path)) {
+    if (fs::exists(config_file_path)) {
         LogPrintf("Config file: %s\n", fs::PathToString(config_file_path));
     } else if (args.IsArgSet("-conf")) {
+        // Warn if no conf file exists at path provided by user
         InitWarning(strprintf(_("The specified config file %s does not exist"), fs::PathToString(config_file_path)));
     } else {
         // Not categorizing as "Warning" because it's the default behavior
@@ -148,6 +146,6 @@ void LogPackageVersion()
 #else
     version_string += " (release build)";
 #endif
-    LogPrintf(CLIENT_NAME " version %s\n", version_string);
+    LogPrintf(PACKAGE_NAME " version %s\n", version_string);
 }
 } // namespace init

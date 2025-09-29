@@ -42,7 +42,6 @@ static bool operator==(const CBanEntry& lhs, const CBanEntry& rhs)
 
 FUZZ_TARGET(banman, .init = initialize_banman)
 {
-    SeedRandomStateForTest(SeedRand::ZEROS);
     FuzzedDataProvider fuzzed_data_provider{buffer.data(), buffer.size()};
     SetMockTime(ConsumeTime(fuzzed_data_provider));
     fs::path banlist_file = gArgs.GetDataDirNet() / "fuzzed_banlist";
@@ -79,9 +78,7 @@ FUZZ_TARGET(banman, .init = initialize_banman)
                             contains_invalid = true;
                         }
                     }
-                    auto ban_time_offset = ConsumeBanTimeOffset(fuzzed_data_provider);
-                    auto since_unix_epoch = fuzzed_data_provider.ConsumeBool();
-                    ban_man.Ban(net_addr, ban_time_offset, since_unix_epoch);
+                    ban_man.Ban(net_addr, ConsumeBanTimeOffset(fuzzed_data_provider), fuzzed_data_provider.ConsumeBool());
                 },
                 [&] {
                     CSubNet subnet{ConsumeSubNet(fuzzed_data_provider)};
@@ -89,9 +86,7 @@ FUZZ_TARGET(banman, .init = initialize_banman)
                     if (!subnet.IsValid()) {
                         contains_invalid = true;
                     }
-                    auto ban_time_offset = ConsumeBanTimeOffset(fuzzed_data_provider);
-                    auto since_unix_epoch = fuzzed_data_provider.ConsumeBool();
-                    ban_man.Ban(subnet, ban_time_offset, since_unix_epoch);
+                    ban_man.Ban(subnet, ConsumeBanTimeOffset(fuzzed_data_provider), fuzzed_data_provider.ConsumeBool());
                 },
                 [&] {
                     ban_man.ClearBanned();
