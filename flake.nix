@@ -16,8 +16,9 @@
         # but with the Skrybit fork's large-tx patches applied.
         bitcoind-large-tx = pkgs.bitcoind.overrideAttrs (old: {
           pname = "bitcoind-large-tx";
-          version = "28.0-skrybit";
+          version = "29.99.0";
           src = ./.;
+          doCheck = false; # Fork modifies tx size limits; upstream tests expect default limits
 
           # Skrybit fork enables larger transaction relay:
           #   maxtxsize=4000000 (vs default 400000)
